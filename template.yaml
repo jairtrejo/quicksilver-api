@@ -1,0 +1,144 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: 'Quicksilver API - The API for avatar.jairtrejo.com'
+
+Parameters:
+  Stage:
+    Type: String
+    Description: Stage of this stack. Can be Dev or Prod.
+    AllowedValues:
+      - Dev
+      - Prod
+    Default: 'Dev'
+  CorsDomain:
+    Type: String
+    Description: CORS authorized domain for this API
+    Default: '*'
+  DomainName:
+    Type: String
+    Description: Domain name for the API, e.g. api-avatar.jairtrejo.com
+    Default: ''
+  SSLCertificateArn:
+    Type: String
+    Description: Arn for an SSL certificate that covers the domain
+    Default: ''
+  HostedZoneId:
+    Type: String
+    Description: HostedZone to create record for the domain
+    Default: ''
+
+Mappings:
+  SecretsMap:
+    Dev:
+      MastodonSecret: '{{resolve:ssm:/AvatarJairtrejo/Dev/MastodonSecret:1}}'
+    Prod:
+      MastodonSecret: '{{resolve:ssm:/AvatarJairtrejo/Prod/MastodonSecret:1}}'
+
+Conditions:
+  ShouldMapDomain: !Not [ !Equals [ !Ref DomainName, "" ]]
+
+Globals:
+  Function:
+    Timeout: 300
+    Environment:
+      Variables:
+        DYNAMO_TABLE_NAME: !Ref PromptTable
+        CORS_DOMAIN: !Ref CorsDomain
+    Tags:
+      Site: avatar.jairtrejo.com
+
+Resources:
+  Api:
+    Type: 'AWS::Serverless::Api'
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowOrigin: !Sub "'${CorsDomain}'"
+        AllowHeaders: "'Authorization'"
+
+  CorsAuthResponse:
+    Type: 'AWS::ApiGateway::GatewayResponse'
+    Properties:
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${CorsDomain}'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Authorization'"
+      ResponseType: DEFAULT_4XX
+      RestApiId: !Ref Api
+
+  ApiDomainName:
+    Type: 'AWS::ApiGateway::DomainName'
+    Condition: ShouldMapDomain
+    Properties:
+      CertificateArn: !Ref SSLCertificateArn
+      DomainName: !Ref DomainName
+
+  ApiRedirectRecord:
+    Type: 'AWS::Route53::RecordSet'
+    Condition: ShouldMapDomain
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: api-avatar.jairtrejo.com
+      Type: A
+      AliasTarget:
+        HostedZoneId: !GetAtt ApiDomainName.DistributionHostedZoneId
+        DNSName: !GetAtt ApiDomainName.DistributionDomainName
+
+  ApiBasePathMapping:
+    Type: 'AWS::ApiGateway::BasePathMapping'
+    Condition: ShouldMapDomain
+    Properties:
+      DomainName: !Ref DomainName
+      RestApiId: !Ref Api
+      Stage: !Ref Api.Stage
+
+  PromptTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: !Sub "AvatarPrompt-${Stage}"
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: N
+        - AttributeName: used_at
+          AttributeType: N
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: used_at
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: created_at
+          KeySchema:
+            - AttributeName: id
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+      BillingMode: PAY_PER_REQUEST
+      Tags:
+        - Key: Site
+          Value: avatar.jairtrejo.com
+
+  SavePromptFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: dist/
+      Handler: quicksilver.save_prompt
+      Runtime: python3.9
+      Events:
+        SavePrompt:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Path: /prompt
+            Method: post
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PromptTable
+
+Outputs:
+  ApiEndpoint:
+    Description: "API Gateway endpoint"
+    Value: !Sub "https://${Api}.execute-api.${AWS::Region}.amazonaws.com/Prod/"

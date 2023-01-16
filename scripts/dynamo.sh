@@ -1,0 +1,3 @@
+#!/bin/bash
+
+aws dynamodb create-table --table-name PromptTable --attribute-definitions AttributeName=id,AttributeType=S AttributeName=created_at,AttributeType=N AttributeName=used_at,AttributeType=N --key-schema AttributeName=id,KeyType=HASH AttributeName=used_at,KeyType=RANGE --global-secondary-indexes IndexName=created_at,KeySchema=[\{AttributeName=id,KeyType=HASH\},\{AttributeName=created_at,KeyType=RANGE\}],Projection=\{ProjectionType=KEYS_ONLY\},ProvisionedThroughput=\{ReadCapacityUnits=5,WriteCapacityUnits=5\} --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 --endpoint http://localhost:8000

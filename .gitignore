@@ -1,0 +1,11 @@
+*.egg-info
+.coverage
+.pyc
+.pytest_cache
+.python-version
+__pycache__
+dist/**
+build
+env.json
+htmlcov
+packaged-template.yaml
