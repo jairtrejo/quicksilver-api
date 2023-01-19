@@ -14,6 +14,8 @@ setup(
         "inflection>=0.4.0",
         "PyJWT>=1.7.1",
         "structlog>=20.1.0",
+        "requests>=2.25.1",
+        "Mastodon.py>=1.8.0",
     ],
     extras_require={
         "dev": [

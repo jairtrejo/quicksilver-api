@@ -30,9 +30,15 @@ Parameters:
 Mappings:
   SecretsMap:
     Dev:
-      MastodonSecret: '{{resolve:ssm:/AvatarJairtrejo/Dev/MastodonSecret:1}}'
+      HfToken: '{{resolve:ssm:/AvatarJairtrejo/Dev/HfToken:1}}'
+      MastodonClientKey: '{{resolve:ssm:/AvatarJairtrejo/Dev/MastodonClientKey:1}}'
+      MastodonClientSecret: '{{resolve:ssm:/AvatarJairtrejo/Dev/MastodonClientSecret:1}}'
+      MastodonAccessToken: '{{resolve:ssm:/AvatarJairtrejo/Dev/MastodonAccessToken:1}}'
     Prod:
-      MastodonSecret: '{{resolve:ssm:/AvatarJairtrejo/Prod/MastodonSecret:1}}'
+      HfToken: '{{resolve:ssm:/AvatarJairtrejo/Prod/HfToken:1}}'
+      MastodonClientKey: '{{resolve:ssm:/AvatarJairtrejo/Prod/MastodonClientKey:1}}'
+      MastodonClientSecret: '{{resolve:ssm:/AvatarJairtrejo/Prod/MastodonClientSecret:1}}'
+      MastodonAccessToken: '{{resolve:ssm:/AvatarJairtrejo/Prod/MastodonAccessToken:1}}'
 
 Conditions:
   ShouldMapDomain: !Not [ !Equals [ !Ref DomainName, "" ]]
@@ -55,15 +61,6 @@ Resources:
       Cors:
         AllowOrigin: !Sub "'${CorsDomain}'"
         AllowHeaders: "'Authorization'"
-
-  CorsAuthResponse:
-    Type: 'AWS::ApiGateway::GatewayResponse'
-    Properties:
-      ResponseParameters:
-        gatewayresponse.header.Access-Control-Allow-Origin: !Sub "'${CorsDomain}'"
-        gatewayresponse.header.Access-Control-Allow-Headers: "'Authorization'"
-      ResponseType: DEFAULT_4XX
-      RestApiId: !Ref Api
 
   ApiDomainName:
     Type: 'AWS::ApiGateway::DomainName'
@@ -105,8 +102,6 @@ Resources:
       KeySchema:
         - AttributeName: id
           KeyType: HASH
-        - AttributeName: used_at
-          KeyType: RANGE
       GlobalSecondaryIndexes:
         - IndexName: created_at
           KeySchema:
@@ -116,10 +111,30 @@ Resources:
               KeyType: RANGE
           Projection:
             ProjectionType: KEYS_ONLY
+        - IndexName: used_at
+          KeySchema:
+            - AttributeName: id
+              KeyType: HASH
+            - AttributeName: used_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
       BillingMode: PAY_PER_REQUEST
       Tags:
         - Key: Site
           Value: avatar.jairtrejo.com
+
+  PromptQueue:
+    Type: 'AWS::SQS::Queue'
+    Properties:
+      VisibilityTimeout: 60
+      MessageRetentionPeriod: 900
+
+  AvatarBucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      AccessControl: Private
+      BucketName: !Sub "avatars.${DomainName}"
 
   SavePromptFunction:
     Type: 'AWS::Serverless::Function'
@@ -127,6 +142,9 @@ Resources:
       CodeUri: dist/
       Handler: quicksilver.save_prompt
       Runtime: python3.9
+      Environment:
+        Variables:
+          CORS_DOMAIN: !Ref CorsDomain
       Events:
         SavePrompt:
           Type: Api
@@ -134,6 +152,54 @@ Resources:
             RestApiId: !Ref Api
             Path: /prompt
             Method: post
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PromptTable
+
+  UpdatePictureFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: dist/
+      Handler: quicksilver.update_picture
+      Runtime: python3.9
+      Timeout: 60
+      Environment:
+        Variables:
+          AVATAR_BUCKET: !Ref AvatarBucket
+          HF_TOKEN: !FindInMap [SecretsMap, !Ref Stage, 'HfToken']
+          MASTODON_CLIENT_KEY: !FindInMap [SecretsMap, !Ref Stage, 'MastodonClientKey']
+          MASTODON_CLIENT_SECRET: !FindInMap [SecretsMap, !Ref Stage, 'MastodonClientSecret']
+          MASTODON_ACCESS_TOKEN: !FindInMap [SecretsMap, !Ref Stage, 'MastodonAccessToken']
+      Events:
+        UpdatePicture:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt PromptQueue.Arn
+            BatchSize: 1
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PromptTable
+        - S3CrudPolicy:
+            BucketName: !Ref AvatarBucket
+
+  PickPromptFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: dist/
+      Handler: quicksilver.pick_prompt
+      Runtime: python3.9
+      Events:
+        ScheduleEvent:
+          Type: ScheduleV2
+          Properties:
+            Description: "Every day"
+            ScheduleExpression: "cron(04 11 * * ? *)"
+            ScheduleExpressionTimezone: "America/Los_Angeles"
+      EventInvokeConfig:
+        DestinationConfig:
+          OnSuccess:
+            Type: SQS
+            Destination: !GetAtt PromptQueue.Arn
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PromptTable

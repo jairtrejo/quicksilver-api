@@ -19,7 +19,12 @@ class Response:
 
     status_code = attr.ib()
     body = attr.ib(default=None)
-    headers = attr.ib(factory=dict)
+    headers = attr.ib(
+        factory=lambda: {
+            "Access-Control-Allow-Origin": os.getenv("CORS_DOMAIN"),
+            "Access-Control-Allow-Headers": "Authorization",
+        }
+    )
 
     def set_cookie(self, name, value):
         self.headers["Set-Cookie"] = name + "=" + value
@@ -83,7 +88,7 @@ def api_handler(*args, model=None):
                     )
                 except TypeError as e:
                     logger.error(
-                        "Invalid model",
+                        "Invalid model fields",
                         model=model,
                         body=event["body"],
                         exc_info=e,
@@ -98,6 +103,17 @@ def api_handler(*args, model=None):
                                 )
                             }
                         ),
+                    ).asdict()
+                except ValueError as e:
+                    logger.error(
+                        "Invalid model",
+                        model=model,
+                        body=event["body"],
+                        exc_info=e,
+                    )
+                    return Response(
+                        status_code=400,
+                        body=json.dumps({"message": str(e)}),
                     ).asdict()
 
             try:
@@ -130,7 +146,7 @@ def api_handler(*args, model=None):
                 )
                 response = Response(
                     status_code=500,
-                    body=json.dumps({"message": "Internal Server Error"}),
+                    body=json.dumps({"message": str(e)}),
                 )
 
             if not response:
@@ -162,11 +178,6 @@ def api_handler(*args, model=None):
                 logger.info(
                     "Failure", response=response, status=response.status_code
                 )
-
-            response.headers["Access-Control-Allow-Origin"] = os.getenv(
-                "CORS_DOMAIN"
-            )
-            response.headers["Access-Control-Allow-Headers"] = "Authorization"
 
             return response.asdict()
 

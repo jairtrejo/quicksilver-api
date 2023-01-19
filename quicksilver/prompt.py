@@ -17,7 +17,13 @@ class Prompt:
         default=attr.Factory(lambda: int(datetime.now().timestamp()))
     )
     used_at = attr.ib(default=None)
-    img_src = attr.ib(default=None)
+
+    @property
+    def url(self):
+        return self.id
+
+    def use(self):
+        self.used_at = int(datetime.now().timestamp())
 
     def asdict(self, *args, **kwargs):
         return attr.asdict(self, *args, **kwargs)
