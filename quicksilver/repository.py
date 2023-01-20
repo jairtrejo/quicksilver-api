@@ -78,4 +78,4 @@ class Prompts:
             },
         )
 
-        return reversed(item["id"] for item in response["Items"])
+        return list(reversed([item["id"] for item in response["Items"]]))
