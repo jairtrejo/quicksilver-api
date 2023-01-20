@@ -114,7 +114,9 @@ Resources:
             - AttributeName: created_at
               KeyType: RANGE
           Projection:
-            ProjectionType: KEYS_ONLY
+            ProjectionType: INCLUDE
+            NonKeyAttributes:
+              - used_at
         - IndexName: used_at
           KeySchema:
             - AttributeName: id
@@ -122,7 +124,7 @@ Resources:
             - AttributeName: used_at
               KeyType: RANGE
           Projection:
-            ProjectionType: KEYS_ONLY
+            ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
       Tags:
         - Key: Site
