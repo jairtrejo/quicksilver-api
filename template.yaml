@@ -107,6 +107,14 @@ Resources:
         - AttributeName: id
           KeyType: HASH
       GlobalSecondaryIndexes:
+        - IndexName: used_at
+          KeySchema:
+            - AttributeName: id
+              KeyType: HASH
+            - AttributeName: used_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
         - IndexName: created_at
           KeySchema:
             - AttributeName: id
@@ -117,14 +125,6 @@ Resources:
             ProjectionType: INCLUDE
             NonKeyAttributes:
               - used_at
-        - IndexName: used_at
-          KeySchema:
-            - AttributeName: id
-              KeyType: HASH
-            - AttributeName: used_at
-              KeyType: RANGE
-          Projection:
-            ProjectionType: ALL
       BillingMode: PAY_PER_REQUEST
       Tags:
         - Key: Site
