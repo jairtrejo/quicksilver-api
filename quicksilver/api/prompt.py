@@ -53,7 +53,7 @@ def update_picture(event, _):
         raise RuntimeError("Hugging Face failure")
 
     img_file = BytesIO(img_bytes)
-    s3.upload_fileobj(img_file, s3_bucket_name, f"{prompt.id}.jpg")
+    s3.upload_fileobj(img_file, s3_bucket_name, f"images/{prompt.id}.jpg")
 
     api = Mastodon(
         mastodon_client_key,

@@ -24,7 +24,7 @@ package: all
 	sam package --s3-bucket artifacts.jairtrejo.mx --output-template-file packaged-template.yaml
 
 deploy: package
-	sam deploy --template-file packaged-template.yaml --stack-name avatar-jairtrejo-api --capabilities CAPABILITY_IAM --parameter-overrides Stage=Prod CorsDomain=https://avatar.jairtrejo.com DomainName=api-avatar.jairtrejo.com SSLCertificateArn=arn:aws:acm:us-east-1:501965419031:certificate/0b9bca2d-cf0c-45ff-8d0d-b01eee8d1357 HostedZoneId=Z0431545UH073TJJS79M
+	sam deploy --template-file packaged-template.yaml --stack-name avatar-jairtrejo-api --capabilities CAPABILITY_IAM --parameter-overrides Stage=Prod CorsDomain=https://avatar.jairtrejo.com DomainName=api-avatar.jairtrejo.com SSLCertificateArn=arn:aws:acm:us-east-1:501965419031:certificate/0b9bca2d-cf0c-45ff-8d0d-b01eee8d1357 HostedZoneId=Z0431545UH073TJJS79M AvatarBucketName=avatars.avatar.jairtrejo.com
 
 clean:
 ifneq ($(wildcard dist/**),)

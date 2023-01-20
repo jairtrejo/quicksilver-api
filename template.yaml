@@ -26,6 +26,10 @@ Parameters:
     Type: String
     Description: HostedZone to create record for the domain
     Default: ''
+  AvatarBucketName:
+    Type: String
+    Description: Bucket name to store the avatar images
+    Default: ''
 
 Mappings:
   SecretsMap:
@@ -130,12 +134,6 @@ Resources:
       VisibilityTimeout: 60
       MessageRetentionPeriod: 900
 
-  AvatarBucket:
-    Type: "AWS::S3::Bucket"
-    Properties:
-      AccessControl: Private
-      BucketName: !Sub "avatars.${DomainName}"
-
   SavePromptFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
@@ -165,7 +163,7 @@ Resources:
       Timeout: 60
       Environment:
         Variables:
-          AVATAR_BUCKET: !Ref AvatarBucket
+          AVATAR_BUCKET: !Ref AvatarBucketName
           HF_TOKEN: !FindInMap [SecretsMap, !Ref Stage, 'HfToken']
           MASTODON_CLIENT_KEY: !FindInMap [SecretsMap, !Ref Stage, 'MastodonClientKey']
           MASTODON_CLIENT_SECRET: !FindInMap [SecretsMap, !Ref Stage, 'MastodonClientSecret']
@@ -180,7 +178,7 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref PromptTable
         - S3CrudPolicy:
-            BucketName: !Ref AvatarBucket
+            BucketName: !Ref AvatarBucketName
 
   PickPromptFunction:
     Type: 'AWS::Serverless::Function'
@@ -193,7 +191,7 @@ Resources:
           Type: ScheduleV2
           Properties:
             Description: "Every day"
-            ScheduleExpression: "cron(04 11 * * ? *)"
+            ScheduleExpression: "cron(05 08 * * ? *)"
             ScheduleExpressionTimezone: "America/Los_Angeles"
       EventInvokeConfig:
         DestinationConfig:
