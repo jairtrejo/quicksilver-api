@@ -14,9 +14,12 @@ class Prompt:
     prompt = attr.ib(validator=_check_text)
     id = attr.ib(default=attr.Factory(lambda: str(uuid.uuid4())))
     created_at = attr.ib(
-        default=attr.Factory(lambda: int(datetime.now().timestamp()))
+        default=attr.Factory(lambda: int(datetime.now().timestamp())),
+        converter=int,
     )
-    used_at = attr.ib(default=None)
+    used_at = attr.ib(
+        default=None, converter=lambda v: int(v) if v is not None else v
+    )
 
     @property
     def url(self):

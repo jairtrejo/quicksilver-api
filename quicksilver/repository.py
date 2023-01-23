@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 import attr
 import boto3
@@ -11,7 +12,7 @@ logger = structlog.get_logger(__name__)
 
 if os.getenv("AWS_SAM_LOCAL"):
     dynamodb = boto3.resource("dynamodb", endpoint_url=LOCAL_DYNAMO_ENDPOINT)
-    os.environ.setdefault("DYNAMO_TABLE_NAME", "PrompTable")
+    os.environ.setdefault("DYNAMO_TABLE_NAME", "PromptTable")
 else:
     dynamodb = boto3.resource("dynamodb")
 
@@ -78,4 +79,29 @@ class Prompts:
             },
         )
 
-        return list(reversed([item["id"] for item in response["Items"]]))
+        prompt_ids = [item["id"] for item in response["Items"]]
+        creation_dates = {
+            item["id"]: item["created_at"] for item in response["Items"]
+        }
+        return sorted(
+            prompt_ids, key=lambda p: creation_dates[p], reverse=True
+        )
+
+    @classmethod
+    def latest(cls):
+        start_of_month = int(datetime.now().replace(day=1).timestamp())
+        table = dynamodb.Table(os.getenv("DYNAMO_TABLE_NAME"))
+
+        response = table.scan(
+            IndexName="used_at",
+            Select="ALL_PROJECTED_ATTRIBUTES",
+            ScanFilter={
+                "used_at": {
+                    "AttributeValueList": [start_of_month],
+                    "ComparisonOperator": "GE",
+                }
+            },
+        )
+
+        prompts = [Prompt(**item) for item in response["Items"]]
+        return sorted(prompts, key=lambda p: p.used_at, reverse=True)

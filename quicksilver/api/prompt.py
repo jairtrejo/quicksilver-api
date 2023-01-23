@@ -83,3 +83,11 @@ def pick_prompt(_, __):
         return random.choice(prompt_ids)
     else:
         raise RuntimeError("No available prompts")
+
+
+@api_handler
+def get_latest_prompts():
+    logconfig.configure()
+    prompts = Prompts.latest()
+
+    return prompts

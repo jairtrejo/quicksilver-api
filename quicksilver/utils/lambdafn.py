@@ -149,7 +149,7 @@ def api_handler(*args, model=None):
                     body=json.dumps({"message": str(e)}),
                 )
 
-            if not response:
+            if response is None:
                 response = Response(status_code=404)
 
             elif isinstance(response, dict):
@@ -158,6 +158,18 @@ def api_handler(*args, model=None):
                         camelize(k, uppercase_first_letter=False): v
                         for k, v in response.items()
                     }
+                )
+                response = Response(status_code=200, body=body)
+
+            elif isinstance(response, list):
+                body = json.dumps(
+                    [
+                        {
+                            camelize(k, uppercase_first_letter=False): v
+                            for k, v in item.asdict().items()
+                        }
+                        for item in response
+                    ]
                 )
                 response = Response(status_code=200, body=body)
 

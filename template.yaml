@@ -156,6 +156,26 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref PromptTable
 
+  GetLatestPromptsFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: dist/
+      Handler: quicksilver.get_latest_prompts
+      Runtime: python3.9
+      Environment:
+        Variables:
+          CORS_DOMAIN: !Ref CorsDomain
+      Events:
+        SavePrompt:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Path: /prompt
+            Method: get
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PromptTable
+
   UpdatePictureFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
