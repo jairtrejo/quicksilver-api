@@ -89,7 +89,7 @@ class Prompts:
 
     @classmethod
     def latest(cls):
-        start_of_month = int(datetime.now().replace(day=1).timestamp())
+        start_of_year = int(datetime.now().replace(month=1, day=1).timestamp())
         table = dynamodb.Table(os.getenv("DYNAMO_TABLE_NAME"))
 
         response = table.scan(
@@ -97,7 +97,7 @@ class Prompts:
             Select="ALL_PROJECTED_ATTRIBUTES",
             ScanFilter={
                 "used_at": {
-                    "AttributeValueList": [start_of_month],
+                    "AttributeValueList": [start_of_year],
                     "ComparisonOperator": "GE",
                 }
             },
