@@ -16,6 +16,7 @@ setup(
         "structlog>=20.1.0",
         "requests>=2.25.1",
         "Mastodon.py>=1.8.0",
+        "banana-dev>=4.0.1",
     ],
     extras_require={
         "dev": [

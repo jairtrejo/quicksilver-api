@@ -1,8 +1,10 @@
+import base64
 import json
 import os
 import random
 from io import BytesIO
 
+import banana_dev as banana
 import boto3
 import requests
 import structlog
@@ -32,25 +34,23 @@ def update_picture(event, _):
     logger.info("Updating picture", aws_event=event, prompt_id=prompt_id)
     prompt = Prompts.from_id(prompt_id)
 
-    hf_token = os.environ["HF_TOKEN"]
+    banana_api_key = os.environ["BANANA_API_KEY"]
+    banana_model_key = os.environ["BANANA_MODEL_KEY"]
     s3_bucket_name = os.environ["AVATAR_BUCKET"]
     mastodon_client_secret = os.environ["MASTODON_CLIENT_SECRET"]
     mastodon_client_key = os.environ["MASTODON_CLIENT_KEY"]
     mastodon_access_token = os.environ["MASTODON_ACCESS_TOKEN"]
 
-    response = requests.post(
-        "https://api-inference.huggingface.co/models/jairtrejo/jairtrejo",
-        headers={"Authorization": "Bearer " + hf_token},
-        json={"inputs": prompt.prompt, "wait_for_model": True},
-    )
-
-    if response.status_code == 200:
-        img_bytes = response.content
-    else:
-        logger.error(
-            "Hugging Face failure", response=response, msg=response.text
+    try:
+        response = banana.run(
+            banana_api_key, banana_model_key, {"prompt": prompt.prompt}
         )
-        raise RuntimeError("Hugging Face failure")
+    except Exception:
+        logger.error("Banana dev failure", response=response)
+        raise RuntimeError("Banana dev failure")
+
+    img_base64 = response["modelOutputs"][0]["image_base64"]
+    img_bytes = base64.b64decode(img_base64)
 
     img_file = BytesIO(img_bytes)
     s3.upload_fileobj(img_file, s3_bucket_name, f"images/{prompt.id}.jpg")

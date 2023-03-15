@@ -34,12 +34,14 @@ Parameters:
 Mappings:
   SecretsMap:
     Dev:
-      HfToken: '{{resolve:ssm:/AvatarJairtrejo/Dev/HfToken:1}}'
+      BananaApiKey: '{{resolve:ssm:/AvatarJairtrejo/Dev/BananaApiKey:1}}'
+      BananaModelKey: '{{resolve:ssm:/AvatarJairtrejo/Dev/BananaModelKey:1}}'
       MastodonClientKey: '{{resolve:ssm:/AvatarJairtrejo/Dev/MastodonClientKey:1}}'
       MastodonClientSecret: '{{resolve:ssm:/AvatarJairtrejo/Dev/MastodonClientSecret:1}}'
       MastodonAccessToken: '{{resolve:ssm:/AvatarJairtrejo/Dev/MastodonAccessToken:1}}'
     Prod:
-      HfToken: '{{resolve:ssm:/AvatarJairtrejo/Prod/HfToken:1}}'
+      BananaApiKey: '{{resolve:ssm:/AvatarJairtrejo/Prod/BananaApiKey:1}}'
+      BananaModelKey: '{{resolve:ssm:/AvatarJairtrejo/Prod/BananaModelKey:1}}'
       MastodonClientKey: '{{resolve:ssm:/AvatarJairtrejo/Prod/MastodonClientKey:1}}'
       MastodonClientSecret: '{{resolve:ssm:/AvatarJairtrejo/Prod/MastodonClientSecret:1}}'
       MastodonAccessToken: '{{resolve:ssm:/AvatarJairtrejo/Prod/MastodonAccessToken:1}}'
@@ -186,7 +188,8 @@ Resources:
       Environment:
         Variables:
           AVATAR_BUCKET: !Ref AvatarBucketName
-          HF_TOKEN: !FindInMap [SecretsMap, !Ref Stage, 'HfToken']
+          BANANA_API_KEY: !FindInMap [SecretsMap, !Ref Stage, 'BananaApiKey']
+          BANANA_MODEL_KEY: !FindInMap [SecretsMap, !Ref Stage, 'BananaModelKey']
           MASTODON_CLIENT_KEY: !FindInMap [SecretsMap, !Ref Stage, 'MastodonClientKey']
           MASTODON_CLIENT_SECRET: !FindInMap [SecretsMap, !Ref Stage, 'MastodonClientSecret']
           MASTODON_ACCESS_TOKEN: !FindInMap [SecretsMap, !Ref Stage, 'MastodonAccessToken']
